@@ -1,0 +1,9 @@
+# echo Flask==2.2.5 > requirements.txt
+fastapi
+uvicorn
+pydantic
+pandas
+numpy
+sqlalchemy
+psycopg2-binary
+scikit-learn
