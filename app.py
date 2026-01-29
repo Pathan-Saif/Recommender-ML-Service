@@ -32,7 +32,16 @@ def save_interaction(data: InteractionIn, db: Session = Depends(get_db)):
     )
     db.add(interaction)
     db.commit()
-    return {"status": "saved"}
+
+    interactions = db.query(Interaction).all()
+    df = pd.DataFrame([
+        {"user_id": i.user_id, "item_id": i.item_id, "weight": i.weight}
+        for i in interactions
+    ])
+    recommender.train(df)
+
+    return {"status": "saved_and_trained"}
+
 
 @app.post("/train")
 def train_model(db: Session = Depends(get_db)):
@@ -45,4 +54,14 @@ def train_model(db: Session = Depends(get_db)):
 
 @app.get("/recommend/{user_id}")
 def recommend(user_id: int, k: int = 10):
-    return {"recommendations": recommender.recommend(user_id, top_k=k)}
+    if not recommender.model_ready:
+        return {
+            "status": "model_not_trained",
+            "recommendations": []
+        }
+
+    return {
+        "status": "ok",
+        "recommendations": recommender.recommend(user_id, top_k=k)
+    }
+
