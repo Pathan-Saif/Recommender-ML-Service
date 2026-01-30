@@ -4,3 +4,5 @@ def map_event_to_weight(event_type: str):
 
 
 
+# (venv) PS C:\Users\HP\Desktop\ml-service> venv\Scripts\activate
+# (venv) PS C:\Users\HP\Desktop\ml-service> uvicorn app:app --reload

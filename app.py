@@ -8,6 +8,7 @@ from database import get_db, engine
 from models import Base, Interaction
 from recommender import RecommenderEngine
 from utils import map_event_to_weight
+from contextlib import asynccontextmanager
 
 app = FastAPI(title="ML Recommender")
 Base.metadata.create_all(bind=engine)
@@ -53,15 +54,29 @@ def train_model(db: Session = Depends(get_db)):
     return {"status": "model_trained", "total_interactions": len(df)}
 
 @app.get("/recommend/{user_id}")
-def recommend(user_id: int, k: int = 10):
+def recommend(user_id: int, k: int = 10, db: Session = Depends(get_db)):
     if not recommender.model_ready:
-        return {
-            "status": "model_not_trained",
-            "recommendations": []
-        }
+        interactions = db.query(Interaction).all()
+        if not interactions:
+            return {"status": "no_data", "recommendations": []}
+
+        df = pd.DataFrame([
+            {"user_id": i.user_id, "item_id": i.item_id, "weight": i.weight}
+            for i in interactions
+        ])
+        recommender.train(df)
 
     return {
         "status": "ok",
         "recommendations": recommender.recommend(user_id, top_k=k)
     }
 
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("ML service starting...")
+    yield
+    print("ML service shutting down...")
+
+app = FastAPI(lifespan=lifespan)
